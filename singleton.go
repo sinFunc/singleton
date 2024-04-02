@@ -5,45 +5,37 @@ import (
 	"sync"
 )
 
-type Singleton struct {
-	mutex sync.Mutex
-	objs  map[string]interface{}
-}
+var objs sync.Map
 
-// make sure there is only one obj
-var (
-	once      sync.Once
-	singleton *Singleton
-)
-
-func getInstance() *Singleton {
-	once.Do(func() {
-		singleton = &Singleton{
-			objs: make(map[string]interface{}),
-		}
-	})
-	return singleton
-
-}
-
-// user interface
-
-// If you dont care about the performance.it will be ok
+// It is more convinient for user to use
+// because user can convert the type which they want
 func GetInstance[T any]() interface{} {
-	s := getInstance()
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	var to *T
+	t := reflect.TypeOf(to)
 
-	obj := new(T)
-
-	tn := reflect.TypeOf(obj).String()
-
-	if o, exist := s.objs[tn]; exist {
-		return o
+	o, exist := objs.Load(t)
+	if exist {
+		return o.(*T)
 	}
 
-	s.objs[tn] = obj
+	obj := new(T)
+	objs.Store(t, obj)
 
 	return obj
+
+}
+
+func GetInstanceTemplate[T any]() (obj *T) {
+	t := reflect.TypeOf(obj)
+
+	o, exist := objs.Load(t)
+	if exist {
+		return o.(*T)
+	}
+
+	obj = new(T)
+	objs.Store(t, obj)
+
+	return
 
 }
